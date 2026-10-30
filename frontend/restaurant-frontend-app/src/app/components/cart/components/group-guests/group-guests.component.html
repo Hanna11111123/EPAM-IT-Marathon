@@ -1,0 +1,164 @@
+@if (snapshot(); as snap) {
+  @if (guests().length > 0 || owner()) {
+    <section class="group" aria-label="Group pre-order">
+      <p class="summary">
+        {{ guests().length }} guests · {{ ordered().length }} ordered ·
+        {{ waiting().length }} waiting
+      </p>
+
+      @if (owner(); as me) {
+        <button
+          type="button"
+          class="my-row"
+          [attr.aria-expanded]="isExpanded(me.id)"
+          (click)="toggle(me.id)"
+        >
+          <h4>My Pre-Order</h4>
+          <span class="meta">
+            {{ ownerItemsCount() }} items · {{ me.total | currency: 'USD' : 'symbol' : '1.0-2' }}
+            <img
+              class="chevron"
+              [class.chevron--up]="isExpanded(me.id)"
+              src="assets/svg/arrow-down.svg"
+              alt=""
+              aria-hidden="true"
+              width="24"
+              height="24"
+            />
+          </span>
+        </button>
+
+        @if (isExpanded(me.id)) {
+          <ul class="dishes dishes--owner">
+            @for (row of me.items; track row.dish.id) {
+              <li class="dish">
+                <span class="dish-name">{{ row.dish.name }} ×{{ row.quantity }}</span>
+                <span class="dish-price">
+                  {{ row.dish.price * row.quantity | currency: 'USD' : 'symbol' : '1.0-2' }}
+                </span>
+              </li>
+            } @empty {
+              <li class="dish dish--muted">You haven't added dishes yet.</li>
+            }
+          </ul>
+        }
+      }
+
+      <h4 class="guests-title">Guests' Pre-Orders</h4>
+
+      <div class="cards">
+        @for (guest of guests(); track guest.id) {
+          <article class="card" [class.card--open]="isExpanded(guest.id)">
+            <button
+              type="button"
+              class="card-head"
+              [disabled]="!guest.isSubmitted"
+              [attr.aria-expanded]="isExpanded(guest.id)"
+              (click)="toggle(guest.id)"
+            >
+              <span class="avatar" [class.avatar--muted]="!guest.isSubmitted">
+                {{ initials(guest.name) }}
+              </span>
+
+              <span class="info">
+                <span class="name">{{ guest.name }}</span>
+                @if (guest.isSubmitted) {
+                  <span class="badge badge--ordered"><span aria-hidden="true">✓</span> Ordered</span>
+                } @else {
+                  <span class="badge badge--waiting"><span aria-hidden="true">●</span> Not ordered yet</span>
+                }
+              </span>
+
+              @if (guest.isSubmitted) {
+                <span class="amount">{{ guest.total | currency: 'USD' : 'symbol' : '1.0-2' }}</span>
+                <img
+                  class="chevron"
+                  [class.chevron--up]="isExpanded(guest.id)"
+                  src="assets/svg/arrow-down.svg"
+                  alt=""
+                  aria-hidden="true"
+                  width="24"
+                  height="24"
+                />
+              }
+            </button>
+
+            @if (isExpanded(guest.id) && guest.isSubmitted) {
+              <div class="details">
+                <ul class="dishes">
+                  @for (row of guest.items; track row.dish.id) {
+                    <li class="dish">
+                      <span class="dish-name">{{ row.dish.name }} ×{{ row.quantity }}</span>
+                      <span class="dish-price">
+                        {{ row.dish.price * row.quantity | currency: 'USD' : 'symbol' : '1.0-2' }}
+                      </span>
+                    </li>
+                  }
+                </ul>
+                <button type="button" class="remove-guest" (click)="askRemove(guest)">
+                  Remove guest
+                </button>
+              </div>
+            }
+          </article>
+        }
+      </div>
+
+      <div class="footer">
+        @if (waiting().length > 0) {
+          <div class="warning" role="status">
+            <span class="warning-icon" aria-hidden="true">!</span>
+            {{ waiting().length }}
+            {{ waiting().length === 1 ? 'guest hasn\'t' : 'guests haven\'t' }} ordered yet
+          </div>
+        }
+
+        <div class="total">
+          <div>
+            <h4>Grand Total</h4>
+            <span class="total-split">
+              Me {{ ownerTotal() | currency: 'USD' : 'symbol' : '1.0-2' }} · Guests
+              {{ guestsTotal() | currency: 'USD' : 'symbol' : '1.0-2' }}
+            </span>
+          </div>
+          <h3 class="total-value">{{ grandTotal() | currency: 'USD' : 'symbol' : '1.0-2' }}</h3>
+        </div>
+
+        @if (error()) {
+          <p class="error" role="alert">{{ error() }}</p>
+        }
+
+        <button
+          type="button"
+          class="button button--primary button--large submit"
+          [disabled]="busy()"
+          (click)="submitGroup()"
+        >
+          {{ busy() ? 'Please wait...' : 'Submit Group Pre-Order' }}
+        </button>
+      </div>
+    </section>
+
+    @if (guestToRemove(); as g) {
+      <div class="dim" role="presentation">
+        <div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="rm-title">
+          <h4 id="rm-title">Remove {{ g.name }}?</h4>
+          <p>Their pre-order ({{ g.total | currency: 'USD' : 'symbol' : '1.0-2' }}) will be removed from the group.</p>
+          <div class="dialog-actions">
+            <button type="button" class="button button--tertiary button--small" (click)="cancelRemove()">
+              Keep guest
+            </button>
+            <button
+              type="button"
+              class="button button--primary button--small danger"
+              [disabled]="busy()"
+              (click)="confirmRemove()"
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+  }
+}
